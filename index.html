@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Get GPS Coordinates</title>
+    <title>Get Best GPS Coordinates</title>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -39,7 +39,7 @@
             width: 100%; 
             margin-top: 12px;
         }
-        button:hover { background: #2563eb; transform: translateY(-2px); }
+        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
         .coords-box { 
             margin-top: 24px; 
             text-align: left; 
@@ -47,12 +47,29 @@
             padding: 16px; 
             border-radius: 8px; 
             border: 1px solid #334155; 
+            position: relative;
         }
         .coords-box p { 
             margin: 8px 0; 
             font-family: monospace; 
             font-size: 16px; 
             color: #10b981; 
+        }
+        /* Live tracking indicator */
+        .live-indicator {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 10px;
+            height: 10px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            display: none;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse {
+            from { transform: scale(1); opacity: 1; }
+            to { transform: scale(1.5); opacity: 0.5; }
         }
         .error { color: #ef4444; margin-top: 16px; font-weight: 600; font-size: 14px; }
     </style>
@@ -62,16 +79,17 @@
     <div class="card">
         <h2 style="margin-top: 0;">Branch GPS Locator</h2>
         <p style="color: #94a3b8; font-size: 14px; margin-bottom: 24px;">
-            Click the button below and allow location access to get your exact coordinates for the RJ Mobile Admin Panel.
+            Click to start searching. It will continuously update to find the most accurate GPS lock. Click again to stop.
         </p>
         
-        <button id="get-location-btn">📍 Get My Coordinates</button>
+        <button id="get-location-btn">📍 Start Getting Coordinates</button>
         
         <div id="output" style="display: none;">
             <div class="coords-box">
+                <div class="live-indicator" id="live-dot" title="Searching for better accuracy..."></div>
                 <p><strong>Lat:</strong> <span id="lat">--</span></p>
                 <p><strong>Lng:</strong> <span id="lng">--</span></p>
-                <p style="font-size: 12px; color: #94a3b8; margin-top: 12px;">Accuracy: <span id="acc">--</span> meters</p>
+                <p style="font-size: 12px; color: #94a3b8; margin-top: 12px;">Best Accuracy: <span id="acc" style="color: #f59e0b; font-weight: bold;">--</span> meters</p>
             </div>
             <button id="copy-btn" style="background: #10b981; margin-top: 16px;">📋 Copy Coordinates</button>
         </div>
@@ -80,48 +98,89 @@
     </div>
 
     <script>
+        let watchId = null;
+        let bestAccuracy = Infinity; // Infinite se start karenge taaki pehli value hamesha save ho
+
         document.getElementById('get-location-btn').addEventListener('click', () => {
             const errorMsg = document.getElementById('error-msg');
             const output = document.getElementById('output');
             const btn = document.getElementById('get-location-btn');
+            const liveDot = document.getElementById('live-dot');
             
             errorMsg.innerText = '';
-            btn.innerText = 'Fetching GPS...';
 
-            if (!navigator.geolocation) {
-                errorMsg.innerText = 'Geolocation is not supported by your browser.';
-                btn.innerText = '📍 Get My Coordinates';
+            // Agar pehle se search chal raha hai, toh use STOP kar do
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                btn.innerText = '📍 Restart Search';
+                btn.style.background = '#3b82f6';
+                liveDot.style.display = 'none'; // Dot chhupa do
                 return;
             }
 
-            // Requesting high accuracy for geofencing
-            navigator.geolocation.getCurrentPosition(
+            if (!navigator.geolocation) {
+                errorMsg.innerText = 'Geolocation is not supported by your browser.';
+                return;
+            }
+
+            // Search start karne ka UI
+            btn.innerText = '🛑 Stop Searching';
+            btn.style.background = '#ef4444'; // Lal rang (Stop ke liye)
+            output.style.display = 'block';
+            liveDot.style.display = 'block'; // Live tracking dot dikhao
+            
+            // Nayi search par accuracy reset kar do
+            bestAccuracy = Infinity;
+            document.getElementById('lat').innerText = 'Locating...';
+            document.getElementById('lng').innerText = 'Locating...';
+            document.getElementById('acc').innerText = '--';
+
+            // watchPosition continuously check karega
+            watchId = navigator.geolocation.watchPosition(
                 (position) => {
-                    document.getElementById('lat').innerText = position.coords.latitude.toFixed(6);
-                    document.getElementById('lng').innerText = position.coords.longitude.toFixed(6);
-                    document.getElementById('acc').innerText = Math.round(position.coords.accuracy);
+                    const currentAccuracy = position.coords.accuracy;
                     
-                    output.style.display = 'block';
-                    btn.innerText = '📍 Refresh Coordinates';
+                    // Agar nayi accuracy pichli wali se behtar (kam meters) hai
+                    if (currentAccuracy < bestAccuracy) {
+                        bestAccuracy = currentAccuracy;
+                        
+                        document.getElementById('lat').innerText = position.coords.latitude.toFixed(6);
+                        document.getElementById('lng').innerText = position.coords.longitude.toFixed(6);
+                        
+                        const accElement = document.getElementById('acc');
+                        accElement.innerText = Math.round(currentAccuracy);
+                        
+                        // Rang badlo accuracy ke hisaab se (Optional - looks cool)
+                        if (currentAccuracy <= 20) accElement.style.color = '#10b981'; // Green for very good
+                        else if (currentAccuracy <= 50) accElement.style.color = '#f59e0b'; // Orange for okay
+                        else accElement.style.color = '#ef4444'; // Red for poor
+                    }
                 },
                 (error) => {
-                    btn.innerText = '📍 Get My Coordinates';
+                    // Agar error aaye toh watch ko stop kar do
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                    btn.innerText = '📍 Start Getting Coordinates';
+                    btn.style.background = '#3b82f6';
+                    liveDot.style.display = 'none';
+
                     switch(error.code) {
                         case error.PERMISSION_DENIED:
-                            errorMsg.innerText = "Permission denied. Please click the lock icon in the URL bar and allow location.";
+                            errorMsg.innerText = "Permission denied. Please allow location access.";
                             break;
                         case error.POSITION_UNAVAILABLE:
                             errorMsg.innerText = "Location information is unavailable right now.";
                             break;
                         case error.TIMEOUT:
-                            errorMsg.innerText = "The request to get user location timed out.";
+                            errorMsg.innerText = "The request timed out. Try outside under clear sky.";
                             break;
                         default:
                             errorMsg.innerText = "An unknown error occurred.";
                             break;
                     }
                 },
-                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         });
 
@@ -129,15 +188,17 @@
             const lat = document.getElementById('lat').innerText;
             const lng = document.getElementById('lng').innerText;
             
-            const textToCopy = `Latitude: ${lat}\nLongitude: ${lng}`;
+            if(lat === 'Locating...') return; // Abhi location aayi nahi hai
+            
+            const textToCopy = `${lat}, ${lng}`; // Format for easy pasting
             
             navigator.clipboard.writeText(textToCopy).then(() => {
                 const copyBtn = document.getElementById('copy-btn');
-                copyBtn.innerText = '✅ Copied to Clipboard!';
-                copyBtn.style.background = '#059669'; // Darker green
+                copyBtn.innerText = '✅ Copied!';
+                copyBtn.style.background = '#059669'; 
                 setTimeout(() => {
                     copyBtn.innerText = '📋 Copy Coordinates';
-                    copyBtn.style.background = '#10b981'; // Reset
+                    copyBtn.style.background = '#10b981'; 
                 }, 2000);
             });
         });
