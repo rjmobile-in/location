@@ -1,207 +1,362 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Get Best GPS Coordinates</title>
-    <style>
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #0f172a; 
-            color: #f8fafc; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 100vh; 
-            margin: 0; 
-        }
-        .card { 
-            background: #1e293b; 
-            padding: 32px; 
-            border-radius: 16px; 
-            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); 
-            text-align: center; 
-            max-width: 400px; 
-            width: 90%; 
-            border: 1px solid #334155; 
-        }
-        button { 
-            background: #3b82f6; 
-            color: white; 
-            border: none; 
-            padding: 14px 24px; 
-            border-radius: 8px; 
-            font-size: 15px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            transition: 0.2s; 
-            width: 100%; 
-            margin-top: 12px;
-        }
-        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
-        .coords-box { 
-            margin-top: 24px; 
-            text-align: left; 
-            background: #0f172a; 
-            padding: 16px; 
-            border-radius: 8px; 
-            border: 1px solid #334155; 
-            position: relative;
-        }
-        .coords-box p { 
-            margin: 8px 0; 
-            font-family: monospace; 
-            font-size: 16px; 
-            color: #10b981; 
-        }
-        /* Live tracking indicator */
-        .live-indicator {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 10px;
-            height: 10px;
-            background-color: #ef4444;
-            border-radius: 50%;
-            display: none;
-            animation: pulse 1s infinite alternate;
-        }
-        @keyframes pulse {
-            from { transform: scale(1); opacity: 1; }
-            to { transform: scale(1.5); opacity: 0.5; }
-        }
-        .error { color: #ef4444; margin-top: 16px; font-weight: 600; font-size: 14px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RJ Mobile | Branch GPS Locator</title>
+  <meta name="description" content="Get accurate GPS coordinates for an RJ Mobile branch." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="logo.png" />
+  <link rel="apple-touch-icon" href="logo.png" />
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('rj_theme'); } catch (e) {}
+      if (t === 'light') document.documentElement.classList.add('light-theme');
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #070707; --surface: #121212; --line: #262626; --chip: #1a1a1a; --hover: #181612;
+      --text: #ffffff; --soft: #a1a1aa;
+      --gold: #d4af37; --gold-text: #e6c35a; --on-gold: #151100; --gold-soft: rgba(212, 175, 55, 0.12);
+      --ok: #34d399; --ok-soft: rgba(52, 211, 153, 0.13); --bad: #f87171;
+      color-scheme: dark;
+    }
+    html.light-theme {
+      --bg: #faf8f3; --surface: #ffffff; --line: #e8e3d5; --chip: #f3efe3; --hover: #fffaf0;
+      --text: #16130a; --soft: #686353;
+      --gold-text: #8a6a00; --gold-soft: rgba(212, 175, 55, 0.16);
+      --ok: #047857; --ok-soft: rgba(4, 120, 87, 0.1); --bad: #b91c1c;
+      color-scheme: light;
+    }
+    html { -webkit-font-smoothing: antialiased; }
+    body { font-family: 'Manrope', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; min-height: 100dvh; padding: 20px 16px 56px; line-height: 1.45; transition: background-color .3s, color .3s; }
+    .wrap { max-width: 480px; margin: 0 auto; }
+    * { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+    button { font: inherit; color: inherit; }
+    ::selection { background: var(--gold); color: var(--on-gold); }
+    button, a { -webkit-touch-callout: none; touch-action: manipulation; }
+
+    /* ---- Header ---- */
+    .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 19px; }
+    .logo { position: relative; width: 46px; height: 46px; border-radius: 50%; background: #fff; border: 2px solid var(--gold); overflow: hidden; display: grid; place-items: center; }
+    .logo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+    .logo b { font-size: 15px; color: #151100; letter-spacing: -.02em; }
+    .logo.has b { display: none; }
+    .icon-btn { position: relative; overflow: hidden; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); color: var(--soft); display: grid; place-items: center; cursor: pointer; transition: color .2s, border-color .2s, transform .3s cubic-bezier(.34, 1.56, .64, 1); }
+    .icon-btn:hover { color: var(--gold-text); border-color: var(--gold); transform: rotate(20deg); }
+    .icon-btn:active { transform: scale(.9); }
+    .icon-btn .sun { display: none; } html.light-theme .icon-btn .sun { display: block; } html.light-theme .icon-btn .moon { display: none; }
+    .icon-btn .sun, .icon-btn .moon { animation: iconIn .5s cubic-bezier(.34, 1.56, .64, 1); }
+
+    h1 { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: clamp(28px, 8vw, 38px); line-height: 1.1; letter-spacing: -0.02em; }
+    .lead { color: var(--soft); font-size: 15.5px; margin: 10px 0 22px; max-width: 420px; }
+
+    /* ---- Card ---- */
+    .card { --q: var(--soft); --qt: var(--soft); background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 22px 20px 20px; display: flex; flex-direction: column; gap: 16px; transition: background-color .3s, border-color .3s; }
+    .card[data-q='ok']  { --q: var(--ok);   --qt: var(--ok); }
+    .card[data-q='mid'] { --q: var(--gold); --qt: var(--gold-text); }
+    .card[data-q='bad'] { --q: var(--bad);  --qt: var(--bad); }
+
+    /* ---- Radar: the accuracy circle shrinks as the GPS locks on ---- */
+    .radar { position: relative; width: min(100%, 290px); aspect-ratio: 1; margin: 0 auto; border-radius: 50%; background: radial-gradient(circle, var(--gold-soft) 0%, transparent 72%), var(--chip); border: 1px solid var(--line); overflow: hidden; }
+    .sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 72%, rgba(212, 175, 55, .34) 100%); opacity: 0; transition: opacity .4s; }
+    .card[data-state='searching'] .sweep { opacity: 1; animation: spin 2.6s linear infinite; }
+    .radar svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .ring { fill: none; stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: center; animation: ringIn .9s cubic-bezier(.16, 1, .3, 1) both; animation-delay: calc(var(--i) * 110ms); }
+    .cross { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
+    .ring-label { fill: var(--soft); font: 700 8.5px 'Manrope', sans-serif; text-anchor: middle; }
+    .acc-ring { fill: var(--q); fill-opacity: .16; stroke: var(--q); stroke-width: 1.6; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: center; transform: scale(1); opacity: 0; transition: transform .7s cubic-bezier(.34, 1.2, .64, 1), opacity .3s, fill .4s, stroke .4s; }
+    .pin { fill: var(--gold); stroke: var(--surface); stroke-width: 2; }
+    .pin-pulse { fill: var(--gold); transform-box: fill-box; transform-origin: center; opacity: 0; }
+    .card[data-state='searching'] .pin-pulse { animation: pulse 1.6s ease-out infinite; }
+
+    /* ---- Readout ---- */
+    .acc-row { display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .acc { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800; font-size: 44px; line-height: 1; letter-spacing: -.02em; color: var(--text); font-variant-numeric: tabular-nums; }
+    .acc small { font-size: 18px; color: var(--soft); margin-left: 3px; font-weight: 700; }
+    .acc.tick { animation: tick .45s cubic-bezier(.34, 1.56, .64, 1); }
+    .chip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); font-size: 13px; font-weight: 800; color: var(--qt); transition: color .3s; }
+    .chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--q); transition: background-color .3s; }
+    .card[data-state='searching'] .chip::before { animation: blink 1s ease-in-out infinite alternate; }
+    .coords { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .cell { background: var(--chip); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+    .cell span { display: block; font-size: 12.5px; font-weight: 700; color: var(--soft); }
+    .cell output { display: block; margin-top: 2px; font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -.01em; overflow-wrap: anywhere; }
+
+    /* ---- Buttons ---- */
+    .primary { position: relative; overflow: hidden; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--gold); color: var(--on-gold); border: 1px solid var(--gold); border-radius: 16px; padding: 17px 20px; font-weight: 800; font-size: 17px; cursor: pointer; transition: transform .15s, filter .15s, background-color .25s, color .25s, border-color .25s; }
+    .primary:hover { filter: brightness(1.07); } .primary:active { transform: scale(.98); }
+    .primary svg, .pill svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .primary .i-stop { display: none; }
+    .card[data-state='searching'] .primary { background: var(--chip); color: var(--bad); border-color: var(--bad); }
+    .card[data-state='searching'] .primary .i-go { display: none; }
+    .card[data-state='searching'] .primary .i-stop { display: block; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .pill { position: relative; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--chip); color: var(--text); text-decoration: none; font-weight: 700; font-size: 14.5px; cursor: pointer; transition: transform .15s, border-color .2s, background-color .25s, color .25s; }
+    .pill:hover { border-color: var(--gold); transform: translateY(-2px); } .pill:active { transform: scale(.96); }
+    .pill[disabled], .pill[aria-disabled='true'] { opacity: .45; pointer-events: none; }
+    .pill.done { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); }
+    .pill.done svg { animation: pop .4s cubic-bezier(.34, 1.56, .64, 1); }
+    .divider { height: 1px; background: var(--line); }
+
+    /* ---- Auto-stop switch ---- */
+    .switch { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; color: var(--soft); cursor: pointer; }
+    .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .track { position: relative; width: 42px; height: 24px; flex-shrink: 0; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); transition: background-color .25s, border-color .25s; }
+    .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--soft); transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), background-color .25s; }
+    .switch input:checked + .track { background: var(--gold); border-color: var(--gold); }
+    .switch input:checked + .track::after { transform: translateX(18px); background: var(--on-gold); }
+    .switch input:focus-visible + .track { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+    .status { min-height: 21px; font-size: 14px; color: var(--soft); text-align: center; }
+    .status.error { color: var(--bad); font-weight: 600; }
+
+    #toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gold); color: var(--on-gold); font-size: 14px; font-weight: 800; padding: 13px 22px; border-radius: 50px; opacity: 0; transition: all .3s; pointer-events: none; z-index: 100; max-width: calc(100vw - 32px); text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,.4); }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ---- Motion ---- */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes ringIn { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes pulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(4.5); opacity: 0; } }
+    @keyframes blink { from { opacity: 1; } to { opacity: .3; } }
+    @keyframes tick { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+    @keyframes pop { 0% { transform: scale(.4); } 60% { transform: scale(1.35); } 100% { transform: scale(1); } }
+    @keyframes iconIn { from { transform: rotate(-90deg) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+    @keyframes ripple { to { transform: scale(1); opacity: 0; } }
+    .ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: .25; pointer-events: none; transform: scale(0); animation: ripple .6s ease-out forwards; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+    ::view-transition-new(root) { z-index: 2; } ::view-transition-old(root) { z-index: 1; }
+    html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after { transition: background-color .45s, color .45s, border-color .45s !important; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <span class="logo" id="logo"><b>RJ</b><img src="logo.png" alt="" onload="this.parentNode.classList.add('has')" onerror="this.remove()" /></span>
+      RJ Mobile
+    </div>
+    <button id="theme" class="icon-btn" type="button" aria-label="Switch between light and dark theme">
+      <svg class="moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </div>
 
-    <div class="card">
-        <h2 style="margin-top: 0;">Branch GPS Locator</h2>
-        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 24px;">
-            Click to start searching. It will continuously update to find the most accurate GPS lock. Click again to stop.
-        </p>
-        
-        <button id="get-location-btn">📍 Start Getting Coordinates</button>
-        
-        <div id="output" style="display: none;">
-            <div class="coords-box">
-                <div class="live-indicator" id="live-dot" title="Searching for better accuracy..."></div>
-                <p><strong>Lat:</strong> <span id="lat">--</span></p>
-                <p><strong>Lng:</strong> <span id="lng">--</span></p>
-                <p style="font-size: 12px; color: #94a3b8; margin-top: 12px;">Best Accuracy: <span id="acc" style="color: #f59e0b; font-weight: bold;">--</span> meters</p>
-            </div>
-            <button id="copy-btn" style="background: #10b981; margin-top: 16px;">📋 Copy Coordinates</button>
-        </div>
-        
-        <div id="error-msg" class="error"></div>
+  <h1>Get exact branch coordinates</h1>
+  <p class="lead">Stand at the shop entrance and start the search. The circle shrinks as the GPS locks on.</p>
+
+  <main class="card" id="card" data-state="idle" data-q="">
+    <div class="radar" aria-hidden="true">
+      <div class="sweep"></div>
+      <svg viewBox="0 0 240 240">
+        <line class="cross" x1="120" y1="12" x2="120" y2="228"/>
+        <line class="cross" x1="12" y1="120" x2="228" y2="120"/>
+        <circle class="ring" style="--i:0" cx="120" cy="120" r="90.6"/>
+        <circle class="ring" style="--i:1" cx="120" cy="120" r="63"/>
+        <circle class="ring" style="--i:2" cx="120" cy="120" r="37.7"/>
+        <text class="ring-label" x="120" y="26">100 m</text>
+        <text class="ring-label" x="120" y="54">30 m</text>
+        <text class="ring-label" x="120" y="79">10 m</text>
+        <circle class="acc-ring" id="acc-ring" cx="120" cy="120" r="100"/>
+        <circle class="pin-pulse" cx="120" cy="120" r="5"/>
+        <circle class="pin" cx="120" cy="120" r="5.5"/>
+      </svg>
     </div>
 
-    <script>
-        let watchId = null;
-        let bestAccuracy = Infinity; // Infinite se start karenge taaki pehli value hamesha save ho
+    <div class="acc-row">
+      <div class="acc" id="acc" aria-live="off">--<small>m</small></div>
+      <span class="chip" id="chip">Not started</span>
+    </div>
 
-        document.getElementById('get-location-btn').addEventListener('click', () => {
-            const errorMsg = document.getElementById('error-msg');
-            const output = document.getElementById('output');
-            const btn = document.getElementById('get-location-btn');
-            const liveDot = document.getElementById('live-dot');
-            
-            errorMsg.innerText = '';
+    <div class="coords">
+      <div class="cell"><span>Latitude</span><output id="lat">--</output></div>
+      <div class="cell"><span>Longitude</span><output id="lng">--</output></div>
+    </div>
 
-            // Agar pehle se search chal raha hai, toh use STOP kar do
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-                btn.innerText = '📍 Restart Search';
-                btn.style.background = '#3b82f6';
-                liveDot.style.display = 'none'; // Dot chhupa do
-                return;
-            }
+    <button id="go" class="primary" type="button">
+      <svg class="i-go" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      <svg class="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+      <span id="go-label">Start search</span>
+    </button>
 
-            if (!navigator.geolocation) {
-                errorMsg.innerText = 'Geolocation is not supported by your browser.';
-                return;
-            }
+    <div class="row">
+      <button id="copy" class="pill" type="button" disabled>
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>
+        <span class="lbl">Copy</span>
+      </button>
+      <a id="maps" class="pill" href="#" target="_blank" rel="noopener" aria-disabled="true">
+        <svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
+        <span>Open in Maps</span>
+      </a>
+    </div>
 
-            // Search start karne ka UI
-            btn.innerText = '🛑 Stop Searching';
-            btn.style.background = '#ef4444'; // Lal rang (Stop ke liye)
-            output.style.display = 'block';
-            liveDot.style.display = 'block'; // Live tracking dot dikhao
-            
-            // Nayi search par accuracy reset kar do
-            bestAccuracy = Infinity;
-            document.getElementById('lat').innerText = 'Locating...';
-            document.getElementById('lng').innerText = 'Locating...';
-            document.getElementById('acc').innerText = '--';
+    <div class="divider"></div>
+    <label class="switch">
+      <input type="checkbox" id="auto" checked />
+      <span class="track"></span>
+      <span>Stop automatically at 10 m or better</span>
+    </label>
+    <p class="status" id="status" role="status">Tap Start search and allow location access.</p>
+  </main>
+</div>
+<div id="toast" role="status"></div>
 
-            // watchPosition continuously check karega
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const currentAccuracy = position.coords.accuracy;
-                    
-                    // Agar nayi accuracy pichli wali se behtar (kam meters) hai
-                    if (currentAccuracy < bestAccuracy) {
-                        bestAccuracy = currentAccuracy;
-                        
-                        document.getElementById('lat').innerText = position.coords.latitude.toFixed(6);
-                        document.getElementById('lng').innerText = position.coords.longitude.toFixed(6);
-                        
-                        const accElement = document.getElementById('acc');
-                        accElement.innerText = Math.round(currentAccuracy);
-                        
-                        // Rang badlo accuracy ke hisaab se (Optional - looks cool)
-                        if (currentAccuracy <= 20) accElement.style.color = '#10b981'; // Green for very good
-                        else if (currentAccuracy <= 50) accElement.style.color = '#f59e0b'; // Orange for okay
-                        else accElement.style.color = '#ef4444'; // Red for poor
-                    }
-                },
-                (error) => {
-                    // Agar error aaye toh watch ko stop kar do
-                    navigator.geolocation.clearWatch(watchId);
-                    watchId = null;
-                    btn.innerText = '📍 Start Getting Coordinates';
-                    btn.style.background = '#3b82f6';
-                    liveDot.style.display = 'none';
+<script>
+  const $ = id => document.getElementById(id);
+  const AUTO_STOP_M = 10;                       // auto-stop threshold in meters
+  const card = $('card'), go = $('go'), accEl = $('acc'), ring = $('acc-ring');
+  let watchId = null, best = null, count = 0, wakeLock = null, toastTimer;
 
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMsg.innerText = "Permission denied. Please allow location access.";
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMsg.innerText = "Location information is unavailable right now.";
-                            break;
-                        case error.TIMEOUT:
-                            errorMsg.innerText = "The request timed out. Try outside under clear sky.";
-                            break;
-                        default:
-                            errorMsg.innerText = "An unknown error occurred.";
-                            break;
-                    }
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-            );
-        });
+  /* ---- Helpers ---- */
+  const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fa = a => (a < 10 ? a.toFixed(1) : String(Math.round(a)));
+  const quality = a => (a <= 10 ? ['ok', 'Excellent'] : a <= 25 ? ['mid', 'Good'] : a <= 50 ? ['mid', 'Okay'] : ['bad', 'Weak']);
+  // Maps accuracy (3 m to 150 m, log scale) to the size of the accuracy circle; matches the 10/30/100 m guide rings
+  const ringScale = a => 0.1 + 0.9 * (Math.log(Math.min(Math.max(a, 3), 150) / 3) / Math.log(50));
+  function showToast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2400); }
+  function setStatus(msg, isError) { const s = $('status'); s.textContent = msg; s.classList.toggle('error', !!isError); }
 
-        document.getElementById('copy-btn').addEventListener('click', () => {
-            const lat = document.getElementById('lat').innerText;
-            const lng = document.getElementById('lng').innerText;
-            
-            if(lat === 'Locating...') return; // Abhi location aayi nahi hai
-            
-            const textToCopy = `${lat}, ${lng}`; // Format for easy pasting
-            
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const copyBtn = document.getElementById('copy-btn');
-                copyBtn.innerText = '✅ Copied!';
-                copyBtn.style.background = '#059669'; 
-                setTimeout(() => {
-                    copyBtn.innerText = '📋 Copy Coordinates';
-                    copyBtn.style.background = '#10b981'; 
-                }, 2000);
-            });
-        });
-    </script>
+  /* ---- Screen wake lock: keeps the phone awake while searching ---- */
+  async function requestWake() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+  function releaseWake() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && watchId !== null) requestWake(); });
+  addEventListener('pagehide', () => { if (watchId !== null) navigator.geolocation.clearWatch(watchId); releaseWake(); });
+
+  /* ---- UI state ---- */
+  function setEnabled(on) {
+    $('copy').disabled = !on;
+    $('maps').setAttribute('aria-disabled', String(!on));
+  }
+  function resetUI() {
+    card.dataset.q = ''; ring.style.opacity = 0;
+    accEl.innerHTML = '--<small>m</small>'; $('chip').textContent = 'Searching';
+    $('lat').textContent = '--'; $('lng').textContent = '--';
+    setEnabled(false);
+  }
+  function renderBest() {
+    const [k, label] = quality(best.acc);
+    card.dataset.q = k;
+    $('chip').textContent = label;
+    accEl.innerHTML = fa(best.acc) + '<small>m</small>';
+    accEl.classList.remove('tick'); void accEl.offsetWidth; if (!reduceMotion()) accEl.classList.add('tick');
+    $('lat').textContent = best.lat.toFixed(6);
+    $('lng').textContent = best.lng.toFixed(6);
+    ring.style.opacity = 1; ring.style.transform = 'scale(' + ringScale(best.acc).toFixed(3) + ')';
+    $('maps').href = 'https://www.google.com/maps?q=' + best.lat.toFixed(6) + ',' + best.lng.toFixed(6);
+    setEnabled(true);
+  }
+
+  /* ---- Search ---- */
+  function onPos(p) {
+    const c = p.coords;
+    if (!isFinite(c.accuracy)) return;
+    count++;
+    if (!best || c.accuracy < best.acc) { best = { lat: c.latitude, lng: c.longitude, acc: c.accuracy }; renderBest(); }
+    if ($('auto').checked && best.acc <= AUTO_STOP_M) { stop(true); return; }
+    setStatus('Searching for a better lock · ' + count + (count === 1 ? ' reading' : ' readings'));
+  }
+  function onErr(err) {
+    if (err.code === err.PERMISSION_DENIED) {
+      stop(false);
+      setStatus('Location is blocked. Allow location for this site in your browser settings, then try again.', true);
+    } else {
+      // Timeouts and weak signal are temporary, so the search keeps running
+      setStatus('No GPS signal yet. Move outside or next to a window. Still searching.', true);
+    }
+  }
+  function start() {
+    if (!navigator.geolocation) { setStatus('This browser does not support location.', true); return; }
+    if (!window.isSecureContext) { setStatus('Location only works on a secure page. Open this page over https.', true); return; }
+    best = null; count = 0; resetUI();
+    card.dataset.state = 'searching'; $('go-label').textContent = 'Stop search';
+    setStatus('Waiting for the first GPS reading…');
+    requestWake();
+    watchId = navigator.geolocation.watchPosition(onPos, onErr, { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 });
+  }
+  function stop(auto) {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null; releaseWake();
+    card.dataset.state = 'idle';
+    $('go-label').textContent = best ? 'Search again' : 'Start search';
+    if (!best) { $('chip').textContent = 'Not started'; return; }
+    setStatus(auto ? 'Locked at ±' + fa(best.acc) + ' m. Ready to copy.' : 'Stopped. Best accuracy ±' + fa(best.acc) + ' m.');
+    if (auto) { showToast('GPS locked at ±' + fa(best.acc) + ' m'); try { navigator.vibrate && navigator.vibrate(60); } catch (e) {} }
+  }
+  go.addEventListener('click', () => (watchId !== null ? stop(false) : start()));
+
+  /* ---- Copy (coordinates + accuracy) ---- */
+  function legacyCopy(text) {
+    let ok = false; const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;font-size:16px;';
+    document.body.appendChild(ta);
+    try { ta.contentEditable = 'true'; ta.readOnly = false; const r = document.createRange(); r.selectNodeContents(ta); const s = getSelection(); s.removeAllRanges(); s.addRange(r); ta.setSelectionRange(0, text.length); ta.focus(); ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta); return ok;
+  }
+  const copyText = text => (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext)
+    ? navigator.clipboard.writeText(text).then(() => true).catch(() => legacyCopy(text)) : Promise.resolve(legacyCopy(text));
+
+  function doCopy() {
+    if (!best) return;
+    const text = '\uD83D\uDCCD Latitude: ' + best.lat.toFixed(6) + '\n' +
+                 '\uD83E\uDDED Longitude: ' + best.lng.toFixed(6) + '\n' +
+                 '\uD83C\uDFAF Accuracy: ' + fa(best.acc) + ' m';
+    copyText(text).then(ok => {
+      if (!ok) { showToast("Couldn't copy. Please copy the values by hand."); return; }
+      showToast('Copied with accuracy');
+      const b = $('copy'), l = b.querySelector('.lbl');
+      b.classList.add('done'); l.textContent = 'Copied';
+      setTimeout(() => { b.classList.remove('done'); l.textContent = 'Copy'; }, 1800);
+    });
+  }
+  $('copy').addEventListener('click', doCopy);
+  $('maps').addEventListener('click', e => { if ($('maps').getAttribute('aria-disabled') === 'true') e.preventDefault(); });
+
+  /* ---- Theme (same circular reveal as the main page) ---- */
+  function applyTheme(light) {
+    document.documentElement.classList.toggle('light-theme', light);
+    try { localStorage.setItem('rj_theme', light ? 'light' : 'dark'); } catch (e) {}
+  }
+  $('theme').addEventListener('click', () => {
+    const light = !document.documentElement.classList.contains('light-theme');
+    if (reduceMotion()) { applyTheme(light); return; }
+    const r = $('theme').getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    if (document.startViewTransition) {
+      try {
+        document.startViewTransition(() => applyTheme(light)).ready.then(() => {
+          document.documentElement.animate(
+            { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + radius + 'px at ' + x + 'px ' + y + 'px)'] },
+            { duration: 650, easing: 'cubic-bezier(.4, 0, .2, 1)', pseudoElement: '::view-transition-new(root)' });
+        }).catch(() => {});
+        return;
+      } catch (e) {}
+    }
+    document.documentElement.classList.add('theme-fade');
+    applyTheme(light);
+    setTimeout(() => document.documentElement.classList.remove('theme-fade'), 500);
+  });
+
+  /* ---- Click ripple ---- */
+  document.addEventListener('pointerdown', e => {
+    const el = e.target.closest('.primary, .pill, .icon-btn');
+    if (!el || el.disabled || el.getAttribute('aria-disabled') === 'true' || reduceMotion()) return;
+    const r = el.getBoundingClientRect(), size = Math.max(r.width, r.height) * 2.2;
+    const x = e.clientX ? e.clientX - r.left : r.width / 2, y = e.clientY ? e.clientY - r.top : r.height / 2;
+    const dot = document.createElement('span');
+    dot.className = 'ripple';
+    dot.style.cssText = 'width:' + size + 'px;height:' + size + 'px;left:' + (x - size / 2) + 'px;top:' + (y - size / 2) + 'px;';
+    el.appendChild(dot);
+    setTimeout(() => dot.remove(), 650);
+  });
+</script>
 </body>
 </html>
